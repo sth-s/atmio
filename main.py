@@ -20,23 +20,23 @@ from langgraph.errors import GraphRecursionError
 from src.graph import get_graph
 from src.schema import CompanyInfo
 
-# --- Configuration ---
 def setup_logging(run_id: str):
+    dev_mode = os.getenv("DEV_MODE", "false").lower() == "true"
+    log_level = logging.DEBUG if dev_mode else logging.INFO
+    
     logging.basicConfig(
-        level=logging.INFO,
+        level=log_level,
         format=f'%(asctime)s [{run_id}] %(levelname)s %(name)s: %(message)s',
         handlers=[
             logging.StreamHandler(sys.stdout)
         ]
     )
-    # Reduce verbosity of third-party libs
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("openai").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 logger = logging.getLogger("main")
 
-# --- Data Handling ---
 
 def load_csv(filepath: str) -> List[Dict[str, str]]:
     """Reads CSV into a list of dictionaries."""
@@ -115,13 +115,14 @@ def main():
     parser.add_argument("--output", default="data_enriched.csv", help="Output CSV file path")
     args = parser.parse_args()
 
-    # 1. Setup
+    # 1. Load env first so DEV_MODE is available for logging
+    if load_dotenv:
+        load_dotenv()
+    
     run_id = str(uuid.uuid4())[:8]
     setup_logging(run_id)
     
-    if load_dotenv:
-        load_dotenv()
-    else:
+    if not load_dotenv:
         logger.warning("python-dotenv not installed. Relying on existing env vars.")
 
     # 2. Load Data
